@@ -1,0 +1,6 @@
+board:
+  name: s32k148_evk
+  full_name: S32K148EVB-Q176
+  vendor: nxp
+  socs:
+    - name: s32k148
