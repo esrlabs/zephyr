@@ -1,7 +1,7 @@
 # Copyright 2023-2024 NXP
 # SPDX-License-Identifier: Apache-2.0
 
-identifier: s32k148_evk
+identifier: s32k148_evb
 name: NXP S32K148EVB-Q176
 vendor: nxp
 type: mcu

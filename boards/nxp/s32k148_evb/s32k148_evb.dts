@@ -9,11 +9,11 @@
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 #include <zephyr/dt-bindings/pwm/pwm.h>
 #include <arm/nxp/nxp_s32k148.dtsi>
-#include "s32k148_evk-pinctrl.dtsi"
+#include "s32k148_evb-pinctrl.dtsi"
 
 / {
-	model = "NXP S32K148EVB-KIT";
-	compatible = "nxp,s32k148_evk";
+	model = "NXP S32K148EVB";
+	compatible = "nxp,s32k148_evb";
 
 	chosen {
 		zephyr,sram = &sram_l;

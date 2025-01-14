@@ -1,7 +1,7 @@
 # Copyright 2023-2024 NXP
 # SPDX-License-Identifier: Apache-2.0
 
-if BOARD_S32K148_EVK
+if BOARD_S32K148_EVB
 
 if SERIAL
 
@@ -10,4 +10,4 @@ config UART_CONSOLE
 
 endif # SERIAL
 
-endif # BOARD_S32K148_EVK
+endif # BOARD_S32K148_EVB
