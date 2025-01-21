@@ -36,6 +36,7 @@
 		blue-pwm-led = &led1_blue_pwm;
 		pwm-0 = &ftm0;
 		sw0 = &button_3;
+		sw1 = &button_4;
 		i2c-0 = &lpi2c0;
 	};
 
@@ -79,6 +80,12 @@
 		button_3: button_0 {
 			label = "SW3";
 			gpios = <&gpioc 12 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_0>;
+		};
+
+		button_4: button_1 {
+			label = "SW4";
+			gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_0>;
 		};
 	};

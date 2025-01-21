@@ -7,7 +7,7 @@ vendor: nxp
 type: mcu
 arch: arm
 ram: 256
-flash: 2048
+flash: 1536
 toolchain:
   - zephyr
 supported:
