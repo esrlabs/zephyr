@@ -155,7 +155,8 @@
 
 /*
  * The S32K148EVB board contains a UJA1132 SBC which needs to be configured via SPI.
- * The factory preset forces it to normal mode though, so the CAN phy is enabled even without configuration.
+ * The factory preset forces it to normal mode though, so the CAN phy is enabled
+ * even without configuration.
  * Therefore, we don't reference a can phy driver node here for now.
  */
 &flexcan0 {
