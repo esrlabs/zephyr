@@ -6,6 +6,10 @@ Overview
 `NXP S32K148-Q176`_ is a low-cost evaluation and development board for general-purpose industrial
 and automotive applications.
 The S32K148-Q176 is based on the 32-bit Arm Cortex-M4F `NXP S32K148`_ microcontroller.
+The onboard OpenSDA serial and debug adapter, running a mass storage device (MSD) bootloader
+and a collection of OpenSDA Applications, offers options for serial communication,
+flash programming, and run-control debugging.
+It is a bridge between a USB host and the embedded target processor.
 
 Hardware
 ********
@@ -13,7 +17,7 @@ Hardware
 - NXP S32K148
     - Arm Cortex-M4F @ up to 112 Mhz
     - 1.5 MB Flash
-    - 128 KB SRAM
+    - 256 KB SRAM
     - up to 127 I/Os
     - 3x FlexCAN with FD
     - eDMA, 12-bit ADC, MPU, ECC and more.
@@ -125,11 +129,40 @@ Programming and Debugging
 Applications for the ``s32k148_evb`` board can be built in the usual way as
 documented in :ref:`build_an_application`.
 
-Flashing
-========
+Configuring a Debug adapter
+===========================
 
-Debugging
-=========
+This board integrates an OpenSDA debug adapter. It can be used for flashing and debugging.
+The board cannot be debugged using the ``west debug`` command, since pyOCD does not support the target.
+
+Connect the USB cable to a PC and connect micro USB connector of the USB cable to micro-B port J24 on the ``s32k148_evb``.
+
+Install the debug host tools as in indicated in :ref:`nxp-s32-debug-host-tools`.
+
+In order to use GDB, install `GDB Server Plug-In for Eclipse-based ARM IDEs`_. It provides GDB remote debugging and flash programming support.
+The server can be run using the following command:
+
+.. code-block:: console
+
+	pegdbserver_console -startserver -device=NXP_S32K1xx_S32K148F2M0M11
+
+Use this command to flash ``zephyr.elf`` file:
+
+.. code-block:: console
+
+	(gdb) load zephyr.elf
+
+Configuring a Console
+=====================
+
+We will use OpenSDA as a USB-to-serial adapter for the serial console.
+
+Use the following settings with your serial terminal of choice (minicom, putty, etc.):
+
+- Speed: 115200
+- Data: 8 bits
+- Parity: None
+- Stop bits: 1
 
 References
 **********
@@ -141,3 +174,6 @@ References
 
 .. _NXP S32K148:
    https://www.nxp.com/products/processors-and-microcontrollers/s32-automotive-platform/s32k-auto-general-purpose-mcus/s32k1-microcontrollers-for-automotive-general-purpose:S32K1
+
+.. _GDB Server Plug-In for Eclipse-based ARM IDEs:
+   https://www.pemicro.com/products/product_viewDetails.cfm?product_id=15320151&productTab=1000000
