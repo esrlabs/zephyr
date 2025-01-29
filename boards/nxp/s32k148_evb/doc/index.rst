@@ -139,7 +139,17 @@ Connect the USB cable to a PC and connect micro USB connector of the USB cable t
 
 Install the debug host tools as in indicated in :ref:`nxp-s32-debug-host-tools`.
 
-In order to use GDB, install `GDB Server Plug-In for Eclipse-based ARM IDEs`_. It provides GDB remote debugging and flash programming support.
+In order to use GDB, first install PEMicro USB driver:
+
+- download `PEMicro USB driver`_
+- Windows: run installation file, Linux: extract downloaded file and run ``setup.sh`` file
+
+Next, download GDB Server Plug-In. It provides GDB remote debugging and flash programming support:
+
+- download `GDB Server Plug-In for Eclipse-based ARM IDEs`_
+- extract downloaded file
+- unzip jar file ``com.pemicro.debug.gdbjtag.pne_X.X.X.XXXXXXXXXXXX.jar``
+
 The server can be run using the following command:
 
 .. code-block:: console
@@ -177,3 +187,6 @@ References
 
 .. _GDB Server Plug-In for Eclipse-based ARM IDEs:
    https://www.pemicro.com/products/product_viewDetails.cfm?product_id=15320151&productTab=1000000
+
+.. _PEMicro USB driver:
+   https://www.pemicro.com/opensda/
