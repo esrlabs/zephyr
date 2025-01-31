@@ -42,8 +42,6 @@ SYSMPU        on-chip     mpu
 PORT          on-chip     pinctrl
 GPIO          on-chip     gpio
 LPUART        on-chip     serial
-LPI2C         on-chip     i2c
-LPSPI         on-chip     spi
 FTM           on-chip     pwm
 FlexCAN       on-chip     can
 Watchdog      on-chip     watchdog
