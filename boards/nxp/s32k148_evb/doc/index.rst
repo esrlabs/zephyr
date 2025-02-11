@@ -24,7 +24,7 @@ Hardware
 
 - Interfaces:
     - CAN, LIN, UART/SCI
-    - Ethernet connector compatible with different ethernet daughter cards
+    - Ethernet connector compatible with different ethernet daughter cards (`ADTJA1101-RMII`_)
     - 2 touchpads, potentiometer, user RGB LED and 2 buttons.
 
 More information about the hardware and design resources can be found at
@@ -55,6 +55,8 @@ The ``s32k148_evb`` board configuration supports the following hardware features
 | RTC       | on-chip    | counter          |
 +-----------+------------+------------------+
 | ADC       | on-chip    | adc              |
++-----------+------------+------------------+
+| ENET      | on-chip    | enet             |
 +-----------+------------+------------------+
 
 The default configuration can be found in the Kconfig file
@@ -198,3 +200,6 @@ References
 
 .. _PEMicro USB driver:
    https://www.pemicro.com/opensda/
+
+.. _ADTJA1101-RMII:
+   https://www.nxp.com/part/ADTJA1101-RMII
