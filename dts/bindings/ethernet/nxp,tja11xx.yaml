@@ -1,9 +1,9 @@
 # Copyright (c) 2023 NXP
 # SPDX-License-Identifier: Apache-2.0
 
-description: TJA1101 PHY
+description: TJA11xx PHY
 
-compatible: "nxp,tja1101"
+compatible: "nxp,tja11xx"
 
 include: phy.yaml
 
