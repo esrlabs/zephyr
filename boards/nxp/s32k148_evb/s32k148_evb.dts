@@ -191,10 +191,4 @@
 	status = "okay";
 	pinctrl-0 = <&pinmux_enet_mdio>;
 	pinctrl-names = "default";
-	phy: phy@0 {
-		compatible = "nxp,tja1101";
-		reg = <0>;
-		status = "okay";
-		master-slave = "default";
-	};
 };
