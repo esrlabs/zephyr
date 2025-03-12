@@ -40,6 +40,7 @@ def test_runner_imports():
         'nrfjprog',
         'nrfutil',
         'nxp_s32dbg',
+        'nxp_s32pedbg',
         'openocd',
         'probe-rs',
         'pyocd',

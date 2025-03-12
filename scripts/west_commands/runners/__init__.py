@@ -49,6 +49,7 @@ _names = [
     'nrfutil',
     'nsim',
     'nxp_s32dbg',
+    'nxp_s32pedbg',
     'openocd',
     'probe_rs',
     'pyocd',

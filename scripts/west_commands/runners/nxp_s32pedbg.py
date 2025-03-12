@@ -23,7 +23,7 @@ NXP_S32DBG_USB_CLASS = 'NXP Probes'
 
 
 @dataclass
-class NXPS32DebugProbeConfig:
+class NXPS32PEDebugProbeConfig:
     """NXP S32 Debug Probe configuration parameters."""
     conn_str: str = 's32dbg'
     server_port: int = 7445
@@ -33,12 +33,12 @@ class NXPS32DebugProbeConfig:
     reset_delay: int = 0
 
 
-class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
+class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
     """Runner front-end for NXP S32 Debug Probe."""
 
     def __init__(self,
                  runner_cfg: RunnerConfig,
-                 probe_cfg: NXPS32DebugProbeConfig,
+                 probe_cfg: NXPS32PEDebugProbeConfig,
                  core_name: str,
                  soc_name: str,
                  soc_family_name: str,
@@ -47,7 +47,7 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
                  tool_opt: list[str] | None = None) -> None:
         super().__init__(runner_cfg)
         self.elf_file: str = runner_cfg.elf_file or ''
-        self.probe_cfg: NXPS32DebugProbeConfig = probe_cfg
+        self.probe_cfg: NXPS32PEDebugProbeConfig = probe_cfg
         self.core_name: str = core_name
         self.soc_name: str = soc_name
         self.soc_family_name: str = soc_family_name
@@ -64,7 +64,7 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
 
     @classmethod
     def name(cls) -> str:
-        return 'nxp_s32dbg'
+        return 'nxp_s32pedbg'
 
     @classmethod
     def capabilities(cls) -> RunnerCaps:
@@ -85,13 +85,13 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
     @classmethod
     def do_add_parser(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument('--core-name',
-                            required=True,
+                            # required=True,
                             help='Core name as supported by the debug probe (e.g. "R52_0_0")')
         parser.add_argument('--soc-name',
-                            required=True,
+                            # required=True,
                             help='SoC name as supported by the debug probe (e.g. "S32K148")')
         parser.add_argument('--soc-family-name',
-                            required=True,
+                            # required=True,
                             help='SoC family name as supported by the debug probe (e.g. "s32k1xx")')
         parser.add_argument('--start-all-cores',
                             action='store_true',
@@ -102,26 +102,26 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
                                  'By default, this runner will try to obtain it from the system '
                                  'path, if available.')
         parser.add_argument('--server-port',
-                            default=NXPS32DebugProbeConfig.server_port,
+                            default=NXPS32PEDebugProbeConfig.server_port,
                             type=int,
                             help='GTA server port')
         parser.add_argument('--speed',
-                            default=NXPS32DebugProbeConfig.speed,
+                            default=NXPS32PEDebugProbeConfig.speed,
                             type=int,
                             help='JTAG interface speed')
         parser.add_argument('--remote-timeout',
-                            default=NXPS32DebugProbeConfig.remote_timeout,
+                            default=NXPS32PEDebugProbeConfig.remote_timeout,
                             type=int,
                             help='Number of seconds to wait for the remote target responses')
 
     @classmethod
-    def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPS32DebugProbeRunner':
-        probe_cfg = NXPS32DebugProbeConfig(args.dev_id,
+    def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPS32PEDebugProbeRunner':
+        probe_cfg = NXPS32PEDebugProbeConfig(args.dev_id,
                                            server_port=args.server_port,
                                            speed=args.speed,
                                            remote_timeout=args.remote_timeout)
 
-        return NXPS32DebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
+        return NXPS32PEDebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
                                       args.soc_family_name, args.start_all_cores,
                                       s32ds_path=args.s32ds_path, tool_opt=args.tool_opt)
 
@@ -224,7 +224,7 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
         #                   / 'Debugger' / 'Server' / 'gta' / 'gta')
         # cmd = [server_exec, '-p', str(self.probe_cfg.server_port)]
         # return cmd
-        return ["pegdbserver_console", "-startserver", "-device=NXP_S32K1xx_S32K148F2M0M11"]
+        return ["/opt/NXP/S32DS.3.5/eclipse/plugins/com.pemicro.debug.gdbjtag.pne_5.1.7.202112141853/lin/pegdbserver_console", "-startserver", "-device=NXP_S32K1xx_S32K148F2M0M11"]
 
     def client_commands(self) -> list[str]:
         """Get launch commands to start the GDB client."""
@@ -294,14 +294,14 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
             gdb_script.append(f'py {name} = {repr(val)}')
 
         # load platform-specific debugger script
-        if command == 'debug':
-            if self.start_all_cores:
-                startup_script = self.get_script('generic_bareboard_all_cores')
-            else:
-                startup_script = self.get_script('generic_bareboard')
-        else:
-            startup_script = self.get_script('attach')
-        gdb_script.append(f'source {startup_script}')
+        # if command == 'debug':
+        #     if self.start_all_cores:
+        #         startup_script = self.get_script('generic_bareboard_all_cores')
+        #     else:
+        #         startup_script = self.get_script('generic_bareboard')
+        # else:
+        #     startup_script = self.get_script('attach')
+        # gdb_script.append(f'source {startup_script}')
 
         # executes the SoC and board initialization sequence
         if command == 'debug':
@@ -314,17 +314,20 @@ class NXPS32DebugProbeRunner(ZephyrBinaryRunner):
         if command == 'debug':
             gdb_script.append('load')
 
-        with tempfile.TemporaryDirectory(suffix='nxp_s32dbg') as tmpdir:
-            gdb_cmds = Path(tmpdir) / 'runner.nxp_s32dbg'
+        with tempfile.TemporaryDirectory(suffix='nxp_s32pedbg') as tmpdir:
+            gdb_cmds = Path(tmpdir) / 'runner.nxp_s32pedbg'
             gdb_cmds.write_text('\n'.join(gdb_script), encoding='utf-8')
             self.logger.debug(gdb_cmds.read_text(encoding='utf-8'))
 
             server_cmd = self.server_commands()
+            print(server_cmd)
             client_cmd = self.client_commands()
-            client_cmd.extend(['-x', gdb_cmds.as_posix()])
-            client_cmd.extend(self.tool_opt)
+            # client_cmd.extend(['-x', gdb_cmds.as_posix()])
+            # client_cmd.extend(self.tool_opt)
+            print(client_cmd)
 
-            self.run_server_and_client(server_cmd, client_cmd, env=self.runtime_environment)
+            #self.run_server_and_client(server_cmd, client_cmd, env=self.runtime_environment)
+            self.run_server_and_client(server_cmd, client_cmd)
 
     def do_debugserver(self, **kwargs) -> None:
         """Start the GTA server on a given port with the given extra parameters from cli."""
