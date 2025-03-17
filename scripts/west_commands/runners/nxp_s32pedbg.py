@@ -1,7 +1,7 @@
 # Copyright 2023 NXP
 # SPDX-License-Identifier: Apache-2.0
 """
-Runner for NXP S32 Debug Probe.
+Runner for NXP P&E Micro Multilink Debug Probe.
 """
 
 import argparse
@@ -26,12 +26,8 @@ NXP_S32DBG_USB_CLASS = 'NXP Probes'
 class NXPS32PEDebugProbeConfig:
     """NXP S32 Debug Probe configuration parameters."""
     conn_str: str = 's32dbg'
-    server_port: int = 7445
-    speed: int = 16000
-    remote_timeout: int = 30
-    reset_type: str | None = 'default'
-    reset_delay: int = 0
-
+    server_port: int = 7224
+    speed: int = 5000
 
 class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
     """Runner front-end for NXP S32 Debug Probe."""
@@ -80,7 +76,7 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
     @classmethod
     def tool_opt_help(cls) -> str:
         return '''Additional options for GDB client when used with "debug" or "attach" commands
-                  or for GTA server when used with "debugserver" command.'''
+                  or for P&E GDB server when used with "debugserver" command.'''
 
     @classmethod
     def do_add_parser(cls, parser: argparse.ArgumentParser) -> None:
@@ -104,22 +100,17 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
         parser.add_argument('--server-port',
                             default=NXPS32PEDebugProbeConfig.server_port,
                             type=int,
-                            help='GTA server port')
+                            help='P&E GDB server port')
         parser.add_argument('--speed',
                             default=NXPS32PEDebugProbeConfig.speed,
                             type=int,
                             help='JTAG interface speed')
-        parser.add_argument('--remote-timeout',
-                            default=NXPS32PEDebugProbeConfig.remote_timeout,
-                            type=int,
-                            help='Number of seconds to wait for the remote target responses')
 
     @classmethod
     def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPS32PEDebugProbeRunner':
         probe_cfg = NXPS32PEDebugProbeConfig(args.dev_id,
                                            server_port=args.server_port,
-                                           speed=args.speed,
-                                           remote_timeout=args.remote_timeout)
+                                           speed=args.speed)
 
         return NXPS32PEDebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
                                       args.soc_family_name, args.start_all_cores,
@@ -207,9 +198,6 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
             '_PROBE_IP': self.probe_cfg.conn_str,
             '_JTAG_SPEED': self.probe_cfg.speed,
             '_GDB_SERVER_PORT': self.probe_cfg.server_port,
-            '_RESET_TYPE': self.probe_cfg.reset_type,
-            '_RESET_DELAY': self.probe_cfg.reset_delay,
-            '_REMOTE_TIMEOUT': self.probe_cfg.remote_timeout,
             '_CORE_NAME': f'{self.soc_name}_{self.core_name}',
             '_SOC_NAME': self.soc_name,
             '_IS_LOGGING_ENABLED': False,
@@ -219,12 +207,16 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
         }
 
     def server_commands(self) -> list[str]:
-        """Get launch commands to start the GTA server."""
-        # server_exec = str(self.s32ds_path / 'S32DS' / 'tools' / 'S32Debugger'
-        #                   / 'Debugger' / 'Server' / 'gta' / 'gta')
-        # cmd = [server_exec, '-p', str(self.probe_cfg.server_port)]
-        # return cmd
-        return ["/opt/NXP/S32DS.3.5/eclipse/plugins/com.pemicro.debug.gdbjtag.pne_5.1.7.202112141853/lin/pegdbserver_console", "-startserver", "-device=NXP_S32K1xx_S32K148F2M0M11"]
+        """Get launch commands to start the P&E GDB server."""
+        server_exec = str(self.s32ds_path / 'eclipse' / 'plugins'
+                / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'lin' / 'pegdbserver_console')
+        cmd = [server_exec]
+        if self.soc_name == 'S32K148':
+            cmd += ['-device=NXP_S32K1xx_S32K148F2M0M11']
+        cmd += ['-startserver', '-singlesession', '-serverport=' + str(self.probe_cfg.server_port),
+                '-gdbmiport=6224', '-interface=OPENSDA', '-speed=' + str(self.probe_cfg.speed),
+                '-port=USB1']
+        return cmd
 
     def client_commands(self) -> list[str]:
         """Get launch commands to start the GDB client."""
@@ -283,7 +275,7 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
 
     def do_attach_debug(self, command: str, **kwargs) -> None:
         """
-        Launch the GTA server and GDB client to start a debugging session.
+        Launch the P&E GDB server and GDB client to start a debugging session.
 
         :param command: command name to execute
         """
@@ -330,7 +322,7 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
             self.run_server_and_client(server_cmd, client_cmd)
 
     def do_debugserver(self, **kwargs) -> None:
-        """Start the GTA server on a given port with the given extra parameters from cli."""
+        """Start the P&E GDB server on a given port with the given extra parameters from cli."""
         server_cmd = self.server_commands()
         server_cmd.extend(self.tool_opt)
         self.check_call(server_cmd)
