@@ -23,18 +23,18 @@ NXP_S32DBG_USB_CLASS = 'NXP Probes'
 
 
 @dataclass
-class NXPS32PEDebugProbeConfig:
-    """NXP S32 Debug Probe configuration parameters."""
+class NXPPEDebugProbeConfig:
+    """NXP Debug Probe configuration parameters."""
     conn_str: str = 's32dbg'
     server_port: int = 7224
     speed: int = 5000
 
-class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
-    """Runner front-end for NXP S32 Debug Probe."""
+class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
+    """Runner front-end for NXP Debug Probe."""
 
     def __init__(self,
                  runner_cfg: RunnerConfig,
-                 probe_cfg: NXPS32PEDebugProbeConfig,
+                 probe_cfg: NXPPEDebugProbeConfig,
                  core_name: str,
                  soc_name: str,
                  soc_family_name: str,
@@ -43,7 +43,7 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
                  tool_opt: list[str] | None = None) -> None:
         super().__init__(runner_cfg)
         self.elf_file: str = runner_cfg.elf_file or ''
-        self.probe_cfg: NXPS32PEDebugProbeConfig = probe_cfg
+        self.probe_cfg: NXPPEDebugProbeConfig = probe_cfg
         self.core_name: str = core_name
         self.soc_name: str = soc_name
         self.soc_family_name: str = soc_family_name
@@ -60,7 +60,7 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
 
     @classmethod
     def name(cls) -> str:
-        return 'nxp_s32pedbg'
+        return 'nxp_pedbg'
 
     @classmethod
     def capabilities(cls) -> RunnerCaps:
@@ -98,21 +98,21 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
                                  'By default, this runner will try to obtain it from the system '
                                  'path, if available.')
         parser.add_argument('--server-port',
-                            default=NXPS32PEDebugProbeConfig.server_port,
+                            default=NXPPEDebugProbeConfig.server_port,
                             type=int,
                             help='P&E GDB server port')
         parser.add_argument('--speed',
-                            default=NXPS32PEDebugProbeConfig.speed,
+                            default=NXPPEDebugProbeConfig.speed,
                             type=int,
                             help='JTAG interface speed')
 
     @classmethod
-    def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPS32PEDebugProbeRunner':
-        probe_cfg = NXPS32PEDebugProbeConfig(args.dev_id,
+    def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPPEDebugProbeRunner':
+        probe_cfg = NXPPEDebugProbeConfig(args.dev_id,
                                            server_port=args.server_port,
                                            speed=args.speed)
 
-        return NXPS32PEDebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
+        return NXPPEDebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
                                       args.soc_family_name, args.start_all_cores,
                                       s32ds_path=args.s32ds_path, tool_opt=args.tool_opt)
 
@@ -306,8 +306,8 @@ class NXPS32PEDebugProbeRunner(ZephyrBinaryRunner):
         if command == 'debug':
             gdb_script.append('load')
 
-        with tempfile.TemporaryDirectory(suffix='nxp_s32pedbg') as tmpdir:
-            gdb_cmds = Path(tmpdir) / 'runner.nxp_s32pedbg'
+        with tempfile.TemporaryDirectory(suffix='nxp_pedbg') as tmpdir:
+            gdb_cmds = Path(tmpdir) / 'runner.nxp_pedbg'
             gdb_cmds.write_text('\n'.join(gdb_script), encoding='utf-8')
             self.logger.debug(gdb_cmds.read_text(encoding='utf-8'))
 
