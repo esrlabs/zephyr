@@ -23,30 +23,24 @@ NXP_PEDBG_USB_PID = 0x0089
 
 @dataclass
 class NXPPEDebugProbeConfig:
-    """NXP Debug Probe configuration parameters."""
-    conn_str: str = 's32dbg'
+    """NXP P&E Micro Multilink Debug Probe configuration parameters."""
+    conn_str: str = 'pedbg'
     server_port: int = 7224
     speed: int = 5000
 
 class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
-    """Runner front-end for NXP Debug Probe."""
+    """Runner front-end for NXP P&E Micro Multilink Debug Probe."""
 
     def __init__(self,
                  runner_cfg: RunnerConfig,
                  probe_cfg: NXPPEDebugProbeConfig,
-                 core_name: str,
                  soc_name: str,
-                 soc_family_name: str,
-                 start_all_cores: bool,
                  s32ds_path: str | None = None,
                  tool_opt: list[str] | None = None) -> None:
         super().__init__(runner_cfg)
         self.elf_file: str = runner_cfg.elf_file or ''
         self.probe_cfg: NXPPEDebugProbeConfig = probe_cfg
-        self.core_name: str = core_name
         self.soc_name: str = soc_name
-        self.soc_family_name: str = soc_family_name
-        self.start_all_cores: bool = start_all_cores
         self.s32ds_path_override: str | None = s32ds_path
 
         self.tool_opt: list[str] = []
@@ -68,7 +62,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
     @classmethod
     def dev_id_help(cls) -> str:
-        return '''Debug probe connection string as in "s32dbg[:<address>]"
+        return '''Debug probe connection string as in "pedbg[:<address>]"
                   where <address> can be the IP address if TAP is available via Ethernet,
                   the serial ID of the probe or empty if TAP is available via USB.'''
 
@@ -79,19 +73,9 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
     @classmethod
     def do_add_parser(cls, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument('--core-name',
-                            # required=True,
-                            help='Core name as supported by the debug probe (e.g. "R52_0_0")')
         parser.add_argument('--soc-name',
-                            # required=True,
+                            required=True,
                             help='SoC name as supported by the debug probe (e.g. "S32K148")')
-        parser.add_argument('--soc-family-name',
-                            # required=True,
-                            help='SoC family name as supported by the debug probe (e.g. "s32k1xx")')
-        parser.add_argument('--start-all-cores',
-                            action='store_true',
-                            help='Start all SoC cores and not just the one being debugged. '
-                                 'Use together with "debug" command.')
         parser.add_argument('--s32ds-path',
                             help='Override the path to NXP S32 Design Studio installation. '
                                  'By default, this runner will try to obtain it from the system '
@@ -103,7 +87,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         parser.add_argument('--speed',
                             default=NXPPEDebugProbeConfig.speed,
                             type=int,
-                            help='JTAG interface speed')
+                            help='Shift frequency is n KHz')
 
     @classmethod
     def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPPEDebugProbeRunner':
@@ -111,9 +95,8 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                                            server_port=args.server_port,
                                            speed=args.speed)
 
-        return NXPPEDebugProbeRunner(cfg, probe_cfg, args.core_name, args.soc_name,
-                                      args.soc_family_name, args.start_all_cores,
-                                      s32ds_path=args.s32ds_path, tool_opt=args.tool_opt)
+        return NXPPEDebugProbeRunner(cfg, probe_cfg, args.soc_name, s32ds_path=args.s32ds_path,
+                tool_opt=args.tool_opt)
 
     @staticmethod
     def find_usb_probes() -> list[str]:
@@ -234,7 +217,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         self.s32ds_path = Path(self.require(app_name, path=self.s32ds_path_override)).parent
 
         if not self.probe_cfg.conn_str:
-            self.probe_cfg.conn_str = f's32dbg:{self.select_probe()}'
+            self.probe_cfg.conn_str = f'pedbg:{self.select_probe()}'
             self.logger.info(f'using debug probe {self.probe_cfg.conn_str}')
 
         if command in ('attach', 'debug'):

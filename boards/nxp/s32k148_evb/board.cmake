@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 board_runner_args(nxp_pedbg
-  "--soc-family-name" "s32k148"
   "--soc-name" "S32K148"
 )
 
