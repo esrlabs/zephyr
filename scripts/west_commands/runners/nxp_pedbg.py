@@ -17,10 +17,9 @@ from pathlib import Path
 
 from runners.core import BuildConfiguration, RunnerCaps, RunnerConfig, ZephyrBinaryRunner
 
-NXP_S32DBG_USB_CLASS = 'NXP Probes'
-#NXP_S32DBG_USB_VID = 0x15a2
-#NXP_S32DBG_USB_PID = 0x0067
-
+NXP_PEDBG_USB_CLASS = 'NXP Probes'
+NXP_PEDBG_USB_VID = 0x1357
+NXP_PEDBG_USB_PID = 0x0089
 
 @dataclass
 class NXPPEDebugProbeConfig:
@@ -122,13 +121,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         # use system's native commands to enumerate and retrieve the USB serial ID
         # to avoid bloating this runner with third-party dependencies that often
         # require priviledged permissions to access the device info
-        macaddr_pattern = r'(?:[0-9a-f]{2}[:]){5}[0-9a-f]{2}'
+        pattern = r'sdafd[0-9a-f]{6}'
         if platform.system() == 'Windows':
-            cmd = f'pnputil /enum-devices /connected /class "{NXP_S32DBG_USB_CLASS}"'
-            serialid_pattern = f'instance id: +usb\\\\.*\\\\({macaddr_pattern})'
+            cmd = f'pnputil /enum-devices /connected /class "{NXP_PEDBG_USB_CLASS}"'
+            serialid_pattern = f'instance id: +usb\\\\.*\\\\({pattern})'
         else:
-            cmd = f'lsusb -v -d {NXP_S32DBG_USB_VID:x}:{NXP_S32DBG_USB_PID:x}'
-            serialid_pattern = f'iserial +.*({macaddr_pattern})'
+            cmd = f'lsusb -v -d {NXP_PEDBG_USB_VID:04x}:{NXP_PEDBG_USB_PID:04x}'
+            serialid_pattern = f'iserial +[0-255] +{pattern}'
 
         try:
             outb = subprocess.check_output(shlex.split(cmd), stderr=subprocess.DEVNULL)
@@ -191,21 +190,6 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
         return None
 
-    @property
-    def script_globals(self) -> dict[str, str | int | None]:
-        """Global variables required by the debugger scripts."""
-        return {
-            '_PROBE_IP': self.probe_cfg.conn_str,
-            '_JTAG_SPEED': self.probe_cfg.speed,
-            '_GDB_SERVER_PORT': self.probe_cfg.server_port,
-            '_CORE_NAME': f'{self.soc_name}_{self.core_name}',
-            '_SOC_NAME': self.soc_name,
-            '_IS_LOGGING_ENABLED': False,
-            '_FLASH_NAME': None,    # not supported
-            '_SECURE_TYPE': None,   # not supported
-            '_SECURE_KEY': None,    # not supported
-        }
-
     def server_commands(self) -> list[str]:
         """Get launch commands to start the P&E GDB server."""
         server_exec = str(self.s32ds_path / 'eclipse' / 'plugins'
@@ -232,20 +216,6 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         cmd = [client_exec]
         return cmd
 
-    def get_script(self, name: str) -> Path:
-        """
-        Get the file path of a debugger script with the given name.
-
-        :param name: name of the script, without the SoC family name prefix
-        :returns: path to the script
-        :raises RuntimeError: if file does not exist
-        """
-        script = (self.s32ds_path / 'S32DS' / 'tools' / 'S32Debugger' / 'Debugger' / 'scripts'
-                  / self.soc_family_name / f'{self.soc_family_name}_{name}.py')
-        if not script.exists():
-            raise RuntimeError(f'script not found: {script}')
-        return script
-
     def do_run(self, command: str, **kwargs) -> None:
         """
         Execute the given command.
@@ -263,9 +233,9 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         app_name = 's32ds' if platform.system() == 'Windows' else 's32ds.sh'
         self.s32ds_path = Path(self.require(app_name, path=self.s32ds_path_override)).parent
 
-        # if not self.probe_cfg.conn_str:
-        #     self.probe_cfg.conn_str = f's32dbg:{self.select_probe()}'
-        #     self.logger.info(f'using debug probe {self.probe_cfg.conn_str}')
+        if not self.probe_cfg.conn_str:
+            self.probe_cfg.conn_str = f's32dbg:{self.select_probe()}'
+            self.logger.info(f'using debug probe {self.probe_cfg.conn_str}')
 
         if command in ('attach', 'debug'):
             self.ensure_output('elf')
@@ -281,26 +251,8 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         """
         gdb_script: list[str] = []
 
-        # setup global variables required for the scripts before sourcing them
-        for name, val in self.script_globals.items():
-            gdb_script.append(f'py {name} = {repr(val)}')
-
-        # load platform-specific debugger script
-        # if command == 'debug':
-        #     if self.start_all_cores:
-        #         startup_script = self.get_script('generic_bareboard_all_cores')
-        #     else:
-        #         startup_script = self.get_script('generic_bareboard')
-        # else:
-        #     startup_script = self.get_script('attach')
-        # gdb_script.append(f'source {startup_script}')
-
-        # executes the SoC and board initialization sequence
-        if command == 'debug':
-            gdb_script.append('py board_init()')
-
-        # initializes the debugger connection to the core specified
-        gdb_script.append('py core_init()')
+        gdb_script.append(f'target remote localhost:' + str(self.probe_cfg.server_port))
+        gdb_script.append(f'monitor reset')
 
         gdb_script.append(f'file {Path(self.elf_file).as_posix()}')
         if command == 'debug':
@@ -314,12 +266,11 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
             server_cmd = self.server_commands()
             print(server_cmd)
             client_cmd = self.client_commands()
-            # client_cmd.extend(['-x', gdb_cmds.as_posix()])
-            # client_cmd.extend(self.tool_opt)
+            client_cmd.extend(['-x', gdb_cmds.as_posix()])
+            client_cmd.extend(self.tool_opt)
             print(client_cmd)
 
-            #self.run_server_and_client(server_cmd, client_cmd, env=self.runtime_environment)
-            self.run_server_and_client(server_cmd, client_cmd)
+            self.run_server_and_client(server_cmd, client_cmd, env=self.runtime_environment)
 
     def do_debugserver(self, **kwargs) -> None:
         """Start the P&E GDB server on a given port with the given extra parameters from cli."""
