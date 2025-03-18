@@ -37,12 +37,14 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                  probe_cfg: NXPPEDebugProbeConfig,
                  soc_name: str,
                  nxpide_path: str | None = None,
+                 pemicro_plugin_path: str | None = None,
                  tool_opt: list[str] | None = None) -> None:
         super().__init__(runner_cfg)
         self.elf_file: str = runner_cfg.elf_file or ''
         self.probe_cfg: NXPPEDebugProbeConfig = probe_cfg
         self.soc_name: str = soc_name
         self.nxpide_path_override: str | None = nxpide_path
+        self.pemicro_plugin_path: str | None = pemicro_plugin_path
 
         self.tool_opt: list[str] = []
         if tool_opt:
@@ -81,6 +83,8 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                             help='Override the path to NXP IDE installation (e.g. NXP S32 Design Studio). '
                                  'By default, this runner will try to obtain it from the system '
                                  'path, if available.')
+        parser.add_argument('--pemicro-plugin-path',
+                            help='Path to P&E Micro plugin.')
         parser.add_argument('--server-port',
                             default=NXPPEDebugProbeConfig.server_port,
                             type=int,
@@ -97,24 +101,17 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                                            speed=args.speed)
 
         return NXPPEDebugProbeRunner(cfg, probe_cfg, args.soc_name, nxpide_path=args.nxpide_path,
-                tool_opt=args.tool_opt)
+                pemicro_plugin_path=args.pemicro_plugin_path, tool_opt=args.tool_opt)
 
     def find_pemicro_plugin(self) -> list[str]:
-        # pattern = r"/opt/NXP/S32DS.3.5/eclipse/plugins/com.pemicro.debug.gdbjtag.pne_*"
-        pattern = f'{self.nxpide_path}/eclipse/plugins/com.pemicro.debug.gdbjtag.pne_*'
+        base_path = f'{self.nxpide_path}/eclipse/plugins'
+        regex = re.compile(r'com\.pemicro\.debug\.gdbjtag\.pne_.*')
 
-        print(pattern)
-
-        plugins = glob.glob(pattern)
-
-        if len(plugins) > 1:
-            print("multiple")
-        elif len(plugins) == 1:
-            print("only one")
-        else:
-            print("no plugins")
-
-        return plugins
+        return [
+            os.path.join(base_path, f)
+            for f in os.listdir(base_path)
+            if regex.match(f)
+        ]
 
     def select_pemicro_plugin(self) -> str:
         plugins = self.find_pemicro_plugin()
@@ -216,13 +213,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
     def server_commands(self) -> list[str]:
         """Get launch commands to start the P&E GDB server."""
-        # server_exec = str(self.nxpide_path / 'eclipse' / 'plugins'
-        #         / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'lin' / 'pegdbserver_console')
-        print('pe micro plugin path: ' + self.pemicro_plugin_path)
         if platform.system() == 'Linux':
             server_exec = str(self.pemicro_plugin_path / 'lin' / 'pegdbserver_console')
         else:
             server_exec = str(self.pemicro_plugin_path / 'win32' / 'pegdbserver_console')
+
+        if not Path(server_exec).exists():
+            raise FileNotFoundError(f"Path does not exist: {server_exec}")
 
         cmd = [server_exec]
         if self.soc_name == 'S32K148':
@@ -263,9 +260,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         app_name = 's32ds' if platform.system() == 'Windows' else 's32ds.sh'
         self.nxpide_path = Path(self.require(app_name, path=self.nxpide_path_override)).parent
 
-        # if not self.pemicro_plugin_path:
-        self.pemicro_plugin_path = f'{self.select_pemicro_plugin()}'
-        print('selected: ' + self.pemicro_plugin_path)
+        if self.pemicro_plugin_path:
+            self.pemicro_plugin_path = Path(self.pemicro_plugin_path)
+        else:
+            self.pemicro_plugin_path = Path(f'{self.select_pemicro_plugin()}')
+
+        if not self.pemicro_plugin_path.exists():
+            raise FileNotFoundError(f"Path does not exist: {self.pemicro_plugin_path}")
 
         if not self.probe_cfg.conn_str:
             self.probe_cfg.conn_str = f'pedbg:{self.select_probe()}'
