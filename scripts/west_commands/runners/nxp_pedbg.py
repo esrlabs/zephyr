@@ -25,7 +25,6 @@ NXP_PEDBG_USB_PID = 0x0089
 @dataclass
 class NXPPEDebugProbeConfig:
     """NXP P&E Micro Multilink Debug Probe configuration parameters."""
-    conn_str: str = 'pedbg'
     server_port: int = 7224
     speed: int = 5000
 
@@ -64,12 +63,6 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                           dev_id=True, tool_opt=True)
 
     @classmethod
-    def dev_id_help(cls) -> str:
-        return '''Debug probe connection string as in "pedbg[:<address>]"
-                  where <address> can be the IP address if TAP is available via Ethernet,
-                  the serial ID of the probe or empty if TAP is available via USB.'''
-
-    @classmethod
     def tool_opt_help(cls) -> str:
         return '''Additional options for GDB client when used with "debug" or "attach" commands
                   or for P&E GDB server when used with "debugserver" command.'''
@@ -96,9 +89,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
     @classmethod
     def do_create(cls, cfg: RunnerConfig, args: argparse.Namespace) -> 'NXPPEDebugProbeRunner':
-        probe_cfg = NXPPEDebugProbeConfig(args.dev_id,
-                                           server_port=args.server_port,
-                                           speed=args.speed)
+        probe_cfg = NXPPEDebugProbeConfig(server_port=args.server_port, speed=args.speed)
 
         return NXPPEDebugProbeRunner(cfg, probe_cfg, args.soc_name, nxpide_path=args.nxpide_path,
                 pemicro_plugin_path=args.pemicro_plugin_path, tool_opt=args.tool_opt)
@@ -163,12 +154,12 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         return sorted(devices)
 
     @classmethod
-    def select_probe(cls) -> str:
+    def get_probe(cls) -> str:
         """
-        Find debugger probes connected and return the serial number of the one selected.
+        Find debugger probes connected and return the serial number.
 
-        If there are multiple debugger probes connected and this runner is being executed
-        in a interactive prompt, ask the user to select one of the probes.
+        If there are multiple debugger probes connected print an information to disconnect unneeded
+        probe(s) and return None
         """
         probes_snr = cls.find_usb_probes()
         if not probes_snr:
@@ -176,27 +167,12 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         elif len(probes_snr) == 1:
             return probes_snr[0]
         else:
-            if not sys.stdin.isatty():
-                raise RuntimeError(
-                    f'refusing to guess which of {len(probes_snr)} connected probes to use '
-                    '(Interactive prompts disabled since standard input is not a terminal). '
-                    'Please specify a device ID on the command line.')
-
             print('There are multiple debug probes connected')
             for i, probe in enumerate(probes_snr, 1):
                 print(f'{i}. {probe}')
 
-            prompt = f'Please select one with desired serial number (1-{len(probes_snr)}): '
-            while True:
-                try:
-                    value: int = int(input(prompt))
-                except EOFError:
-                    sys.exit(0)
-                except ValueError:
-                    continue
-                if 1 <= value <= len(probes_snr):
-                    break
-            return probes_snr[value - 1]
+            print('Please disconnect any unnecessary probes and leave only one connected.')
+            return None
 
     @property
     def runtime_environment(self) -> dict[str, str] | None:
@@ -214,14 +190,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
     def server_commands(self) -> list[str]:
         """Get launch commands to start the P&E GDB server."""
         if platform.system() == 'Linux':
-            server_exec = str(self.pemicro_plugin_path / 'lin' / 'pegdbserver_console')
+            path = str(self.pemicro_plugin_path / 'lin')
         else:
-            server_exec = str(self.pemicro_plugin_path / 'win32' / 'pegdbserver_console')
+            path = str(self.pemicro_plugin_path / 'win32')
 
-        if not Path(server_exec).exists():
-            raise FileNotFoundError(f"Path does not exist: {server_exec}")
+        app = Path(self.require('pegdbserver_console', path=path))
 
-        cmd = [server_exec]
+        cmd = [app.as_posix()]
         if self.soc_name == 'S32K148':
             cmd += ['-device=NXP_S32K1xx_S32K148F2M0M11']
         cmd += ['-startserver', '-singlesession', '-serverport=' + str(self.probe_cfg.server_port),
@@ -268,9 +243,9 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         if not self.pemicro_plugin_path.exists():
             raise FileNotFoundError(f"Path does not exist: {self.pemicro_plugin_path}")
 
-        if not self.probe_cfg.conn_str:
-            self.probe_cfg.conn_str = f'pedbg:{self.select_probe()}'
-            self.logger.info(f'using debug probe {self.probe_cfg.conn_str}')
+        probe = f'{self.get_probe()}'
+        if not probe:
+            self.logger.info(f'using debug probe \"{probe}\"')
 
         if command in ('attach', 'debug'):
             self.ensure_output('elf')
