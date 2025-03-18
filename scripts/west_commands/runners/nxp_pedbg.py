@@ -18,7 +18,7 @@ from pathlib import Path
 
 from runners.core import BuildConfiguration, RunnerCaps, RunnerConfig, ZephyrBinaryRunner
 
-NXP_PEDBG_USB_CLASS = 'NXP Probes'
+NXP_PEDBG_USB_CLASS = 'Jungo'
 NXP_PEDBG_USB_VID = 0x1357
 NXP_PEDBG_USB_PID = 0x0089
 
@@ -133,13 +133,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         # use system's native commands to enumerate and retrieve the USB serial ID
         # to avoid bloating this runner with third-party dependencies that often
         # require priviledged permissions to access the device info
-        pattern = r'sdafd[0-9a-f]{6}'
         if platform.system() == 'Windows':
             cmd = f'pnputil /enum-devices /connected /class "{NXP_PEDBG_USB_CLASS}"'
-            serialid_pattern = f'instance id: +usb\\\\.*\\\\({pattern})'
+            pattern = fr'instance id:\s+usb\\vid_{NXP_PEDBG_USB_VID:04x}.*pid_{NXP_PEDBG_USB_PID:04x}.*\\'
         else:
+            serialid_pattern = r'sdafd[0-9a-f]{6}'
             cmd = f'lsusb -v -d {NXP_PEDBG_USB_VID:04x}:{NXP_PEDBG_USB_PID:04x}'
-            serialid_pattern = f'iserial +[0-255] +{pattern}'
+            pattern = f'iserial +[0-255] +{serialid_pattern}'
 
         try:
             outb = subprocess.check_output(shlex.split(cmd), stderr=subprocess.DEVNULL)
@@ -149,7 +149,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
         devices: list[str] = []
         if out and 'no devices were found' not in out:
-            devices = re.findall(serialid_pattern, out)
+            devices = re.findall(pattern, out)
 
         return sorted(devices)
 
