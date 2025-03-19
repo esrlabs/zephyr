@@ -197,9 +197,9 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
     def server_commands(self) -> list[str]:
         """Get launch commands to start the P&E GDB server."""
         if platform.system() == 'Linux':
-            path = str(self.pemicro_plugin_path / 'lin')
+            path = f'{self.pemicro_plugin_path}/lin'
         else:
-            path = str(self.pemicro_plugin_path / 'win32')
+            path = f'{self.pemicro_plugin_path}/win32'
 
         app = Path(self.require('pegdbserver_console', path=path))
 
@@ -242,12 +242,10 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         app_name = 's32ds' if platform.system() == 'Windows' else 's32ds.sh'
         self.nxpide_path = Path(self.require(app_name, path=self.nxpide_path_override)).parent
 
-        if self.pemicro_plugin_path:
-            self.pemicro_plugin_path = Path(self.pemicro_plugin_path)
-        else:
-            self.pemicro_plugin_path = Path(f'{self.select_pemicro_plugin()}')
+        if not self.pemicro_plugin_path:
+            self.pemicro_plugin_path = f'{self.select_pemicro_plugin()}'
 
-        if not self.pemicro_plugin_path.exists():
+        if not Path(self.pemicro_plugin_path).exists():
             raise FileNotFoundError(f"Path does not exist: {self.pemicro_plugin_path}")
 
         probe = f'{self.get_probe()}'
