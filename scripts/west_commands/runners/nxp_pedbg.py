@@ -95,6 +95,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                 pemicro_plugin_path=args.pemicro_plugin_path, tool_opt=args.tool_opt)
 
     def find_pemicro_plugin(self) -> list[str]:
+        """Return a list of paths to installed P&E Micro plugins."""
         base_path = f'{self.nxpide_path}/eclipse/plugins'
         regex = re.compile(r'com\.pemicro\.debug\.gdbjtag\.pne_.*')
 
@@ -105,6 +106,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         ]
 
     def select_pemicro_plugin(self) -> str:
+        """Find P&E Micro plugin and return the path."""
         plugins = self.find_pemicro_plugin()
         if not plugins:
             raise RuntimeError('there are no P&E Micro plugins installed');
@@ -162,7 +164,9 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         Find debugger probes connected and return the serial number.
 
         If there are multiple debugger probes connected print an information to disconnect unneeded
-        probe(s) and return None
+        probe(s).
+
+        :raises RuntimeError: if no probes or multiple probes connected
         """
         probes_snr = cls.find_usb_probes()
         if not probes_snr:
@@ -175,7 +179,7 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
                 print(f'{i}. {probe}')
 
             print('Please disconnect any unnecessary probes and leave only one connected.')
-            return None
+            raise RuntimeError('multiple debug probes connected')
 
     @property
     def runtime_environment(self) -> dict[str, str] | None:
