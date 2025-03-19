@@ -18,7 +18,7 @@ from pathlib import Path
 
 from runners.core import BuildConfiguration, RunnerCaps, RunnerConfig, ZephyrBinaryRunner
 
-NXP_PEDBG_USB_CLASS = 'Jungo'
+NXP_PEDBG_USB_CLASS = 'usb'
 NXP_PEDBG_USB_VID = 0x1357
 NXP_PEDBG_USB_PID = 0x0089
 
@@ -133,17 +133,20 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
         # use system's native commands to enumerate and retrieve the USB serial ID
         # to avoid bloating this runner with third-party dependencies that often
         # require priviledged permissions to access the device info
+        serialid_pattern = r'sdafd[0-9a-f]{6}'
         if platform.system() == 'Windows':
+            coding = 'windows-1252'
             cmd = f'pnputil /enum-devices /connected /class "{NXP_PEDBG_USB_CLASS}"'
-            pattern = fr'instance id:\s+usb\\vid_{NXP_PEDBG_USB_VID:04x}.*pid_{NXP_PEDBG_USB_PID:04x}.*\\'
+            pattern = fr'instance id:\s+usb\\vid_{NXP_PEDBG_USB_VID:04x}.*pid_{NXP_PEDBG_USB_PID:04x}\\{serialid_pattern}'
         else:
+            coding = 'utf-8'
             serialid_pattern = r'sdafd[0-9a-f]{6}'
             cmd = f'lsusb -v -d {NXP_PEDBG_USB_VID:04x}:{NXP_PEDBG_USB_PID:04x}'
             pattern = f'iserial +[0-255] +{serialid_pattern}'
 
         try:
             outb = subprocess.check_output(shlex.split(cmd), stderr=subprocess.DEVNULL)
-            out = outb.decode('utf-8').strip().lower()
+            out = outb.decode(coding).strip().lower()
         except subprocess.CalledProcessError as err:
             raise RuntimeError('error while looking for debug probes connected') from err
 
