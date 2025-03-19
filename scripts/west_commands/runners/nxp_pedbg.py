@@ -202,12 +202,13 @@ class NXPPEDebugProbeRunner(ZephyrBinaryRunner):
 
     def server_commands(self) -> list[str]:
         """Get launch commands to start the P&E GDB server."""
+        path = Path(self.pemicro_plugin_path) if self.pemicro_plugin_path else Path()
         if platform.system() == 'Linux':
-            app = f'{self.pemicro_plugin_path}/lin/pegdbserver_console'
+            app = path / 'lin' / 'pegdbserver_console'
         else:
-            app = f'{self.pemicro_plugin_path}/win32/pegdbserver_console'
+            app = path / 'win32' / 'pegdbserver_console'
 
-        cmd = [app]
+        cmd = [str(app)]
         if self.soc_name == 'S32K148':
             cmd += ['-device=NXP_S32K1xx_S32K148F2M0M11']
         cmd += ['-startserver', '-singlesession', '-serverport=' + str(self.probe_cfg.server_port),
