@@ -14,15 +14,14 @@ TEST_DEVICE = 'pedbg'
 TEST_SPEED = 5000
 TEST_SERVER_PORT = 7224
 TEST_SOC_NAME = 'S32K148'
-TEST_S32DS_PATH_OVERRIDE = Path('/opt/NXP/S32DS.3.5')
-TEST_PEMICRO_PLUGIN_PATH = Path('/opt/NXP/S32DS.3.5/eclipse/plugins/com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551')
-# TEST_TOOL_OPT = ['--test-opt-1', '--test-opt-2']
-TEST_TOOL_OPT = ''
+TEST_S32DS_PATH_OVERRIDE = None
+TEST_PEMICRO_PLUGIN_PATH = Path('eclipse/plugins/com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551')
+TEST_TOOL_OPT = ['--test-opt-1', '--test-opt-2']
 
 TEST_S32DS_CMD = 's32ds'
-TEST_SERVER_LIN_CMD = Path('/opt/NXP/S32DS.3.5') / 'eclipse' / 'plugins' / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'lin' / 'pegdbserver_console'
-TEST_SERVER_WIN_CMD = Path('/opt/NXP/S32DS.3.5') / 'eclipse' / 'plugins' / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'win32' / 'pegdbserver_console'
-TEST_ARM_GDB_CMD = Path('/opt/NXP/S32DS.3.5/S32DS') / 'tools' / 'gdb-arm' / 'arm32-eabi' / 'bin' / 'arm-none-eabi-gdb-py'
+TEST_SERVER_LIN_CMD = Path('eclipse') / 'plugins' / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'lin' / 'pegdbserver_console'
+TEST_SERVER_WIN_CMD = Path('eclipse') / 'plugins' / 'com.pemicro.debug.gdbjtag.pne_5.9.5.202412131551' / 'win32' / 'pegdbserver_console'
+TEST_ARM_GDB_CMD = Path('S32DS') / 'tools' / 'gdb-arm' / 'arm32-eabi' / 'bin' / 'arm-none-eabi-gdb-py'
 
 TEST_S32DS_PYTHON_LIB = Path('S32DS') / 'build_tools' / 'msys32' / 'mingw32' / 'lib' / 'python2.7'
 TEST_S32DS_RUNTIME_ENV = {
@@ -31,7 +30,7 @@ TEST_S32DS_RUNTIME_ENV = {
 
 TEST_ALL_KWARGS = {
     'NXPPEDebugProbeConfig': {
-        'conn_str': TEST_DEVICE,
+        'dev_id': TEST_DEVICE,
         'server_port': TEST_SERVER_PORT,
         'speed': TEST_SPEED,
     },
@@ -64,7 +63,8 @@ DEBUGSERVER_WIN_ALL_EXPECTED_CALL = [
     '-gdbmiport=6224',
     '-interface=OPENSDA',
     f'-speed={TEST_SPEED}',
-    '-port=USB1',
+    '-porD',
+    *TEST_TOOL_OPT,
 ]
 
 DEBUGSERVER_LIN_ALL_EXPECTED_CALL = [
@@ -76,12 +76,14 @@ DEBUGSERVER_LIN_ALL_EXPECTED_CALL = [
     '-gdbmiport=6224',
     '-interface=OPENSDA',
     f'-speed={TEST_SPEED}',
-    '-port=USB1',
+    '-porD',
+    *TEST_TOOL_OPT,
 ]
 
-DEBUG_ALL_EXPECTED_CALL = {
+DEBUG_LIN_ALL_EXPECTED_CALL = {
     'client': [
         str(TEST_ARM_GDB_CMD),
+        '-x', 'TEST_GDB_SCRIPT',
         *TEST_TOOL_OPT,
     ],
     'server': [
@@ -93,7 +95,7 @@ DEBUG_ALL_EXPECTED_CALL = {
         '-gdbmiport=6224',
         '-interface=OPENSDA',
         f'-speed={TEST_SPEED}',
-        '-port=USB1'
+        '-porD'
     ],
     'gdb_script': [
         f'target remote localhost:{TEST_SERVER_PORT}',
@@ -103,10 +105,44 @@ DEBUG_ALL_EXPECTED_CALL = {
     ]
 }
 
-ATTACH_ALL_EXPECTED_CALL = {
-    **DEBUG_ALL_EXPECTED_CALL,
+DEBUG_WIN_ALL_EXPECTED_CALL = {
+    'client': [
+        str(TEST_ARM_GDB_CMD),
+        '-x', 'TEST_GDB_SCRIPT',
+        *TEST_TOOL_OPT,
+    ],
+    'server': [
+        str(TEST_SERVER_WIN_CMD),
+        '-device=NXP_S32K1xx_S32K148F2M0M11',
+        '-startserver',
+        '-singlesession',
+        f'-serverport={TEST_SERVER_PORT}',
+        '-gdbmiport=6224',
+        '-interface=OPENSDA',
+        f'-speed={TEST_SPEED}',
+        '-porD'
+    ],
     'gdb_script': [
-        'target remote localhost: {TEST_SERVER_PORT}',
+        f'target remote localhost:{TEST_SERVER_PORT}',
+        'monitor reset',
+        f'file {RC_KERNEL_ELF}',
+        'load',
+    ]
+}
+
+ATTACH_WIN_ALL_EXPECTED_CALL = {
+    **DEBUG_WIN_ALL_EXPECTED_CALL,
+    'gdb_script': [
+        f'target remote localhost:{TEST_SERVER_PORT}',
+        'monitor reset',
+        f'file {RC_KERNEL_ELF}',
+    ]
+}
+
+ATTACH_LIN_ALL_EXPECTED_CALL = {
+    **DEBUG_LIN_ALL_EXPECTED_CALL,
+    'gdb_script': [
+        f'target remote localhost:{TEST_SERVER_PORT}',
         'monitor reset',
         f'file {RC_KERNEL_ELF}',
     ]
@@ -171,65 +207,67 @@ def test_debugserver(require, check_call, system,
     check_call.assert_called_once_with(expected)
 
 
-# @pytest.mark.parametrize('pedbg_args,expected,osname', [
-#     (TEST_ALL_KWARGS, DEBUG_ALL_EXPECTED_CALL, 'Windows'),
-#     (TEST_ALL_PARAMS, DEBUG_ALL_EXPECTED_CALL, 'Windows'),
-#     (TEST_ALL_KWARGS, DEBUG_ALL_EXPECTED_CALL, 'Linux'),
-#     (TEST_ALL_PARAMS, DEBUG_ALL_EXPECTED_CALL, 'Linux'),
-# ])
-# @patch.dict(os.environ, TEST_S32DS_RUNTIME_ENV, clear=True)
-# @patch('platform.system')
-# @patch('tempfile.TemporaryDirectory')
-# @patch('runners.core.ZephyrBinaryRunner.popen_ignore_int')
-# @patch('runners.core.ZephyrBinaryRunner.check_call')
-# @patch('runners.core.ZephyrBinaryRunner.require', side_effect=require_patch)
-# def test_debug(require, check_call, popen_ignore_int, temporary_dir, system,
-#                pedbg_args, expected, osname, pedbg, tmp_path):
+@pytest.mark.parametrize('pedbg_args,expected,osname', [
+    (TEST_ALL_KWARGS, DEBUG_WIN_ALL_EXPECTED_CALL, 'Windows'),
+    (TEST_ALL_PARAMS, DEBUG_WIN_ALL_EXPECTED_CALL, 'Windows'),
+    (TEST_ALL_KWARGS, DEBUG_LIN_ALL_EXPECTED_CALL, 'Linux'),
+    (TEST_ALL_PARAMS, DEBUG_LIN_ALL_EXPECTED_CALL, 'Linux'),
+])
+@patch.dict(os.environ, TEST_S32DS_RUNTIME_ENV, clear=True)
+@patch('platform.system')
+@patch('tempfile.TemporaryDirectory')
+@patch('runners.core.ZephyrBinaryRunner.popen_ignore_int')
+@patch('runners.core.ZephyrBinaryRunner.check_call')
+@patch('runners.core.ZephyrBinaryRunner.require', side_effect=require_patch)
+def test_debug(require, check_call, popen_ignore_int, temporary_dir, system,
+               pedbg_args, expected, osname, pedbg, tmp_path):
 
-#     # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
-#     temporary_dir.return_value.__enter__.return_value = tmp_path
-#     gdb_script = tmp_path / 'runner.nxp_pedbg'
-#     expected_client = [gdb_script.as_posix() for _ in expected['client']]
+    # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
+    temporary_dir.return_value.__enter__.return_value = tmp_path
+    gdb_script = tmp_path / 'runner.nxp_pedbg'
+    expected_client = [e.replace('TEST_GDB_SCRIPT', gdb_script.as_posix())
+                       for e in expected['client']]
 
-#     system.return_value = osname
-#     expected_env = TEST_S32DS_RUNTIME_ENV if osname == 'Windows' else None
+    system.return_value = osname
+    expected_env = TEST_S32DS_RUNTIME_ENV if osname == 'Windows' else None
 
-#     runner = pedbg(pedbg_args)
-#     runner.run('debug')
+    runner = pedbg(pedbg_args)
+    runner.run('debug')
 
-#     assert require.called
-#     assert gdb_script.read_text().splitlines() == expected['gdb_script']
-#     popen_ignore_int.assert_called_once_with(expected['server'], env=expected_env)
-#     check_call.assert_called_once_with(expected_client, env=expected_env)
+    assert require.called
+    assert gdb_script.read_text().splitlines() == expected['gdb_script']
+    popen_ignore_int.assert_called_once_with(expected['server'], env=expected_env)
+    check_call.assert_called_once_with(expected_client, env=expected_env)
 
 
-# @pytest.mark.parametrize('pedbg_args,expected,osname', [
-#     (TEST_ALL_KWARGS, ATTACH_ALL_EXPECTED_CALL, 'Windows'),
-#     (TEST_ALL_PARAMS, ATTACH_ALL_EXPECTED_CALL, 'Windows'),
-#     (TEST_ALL_KWARGS, ATTACH_ALL_EXPECTED_CALL, 'Linux'),
-#     (TEST_ALL_PARAMS, ATTACH_ALL_EXPECTED_CALL, 'Linux'),
-# ])
-# @patch.dict(os.environ, TEST_S32DS_RUNTIME_ENV, clear=True)
-# @patch('platform.system')
-# @patch('tempfile.TemporaryDirectory')
-# @patch('runners.core.ZephyrBinaryRunner.popen_ignore_int')
-# @patch('runners.core.ZephyrBinaryRunner.check_call')
-# @patch('runners.core.ZephyrBinaryRunner.require', side_effect=require_patch)
-# def test_attach(require, check_call, popen_ignore_int, temporary_dir, system,
-#                 pedbg_args, expected, osname, pedbg, tmp_path):
+@pytest.mark.parametrize('pedbg_args,expected,osname', [
+    (TEST_ALL_KWARGS, ATTACH_WIN_ALL_EXPECTED_CALL, 'Windows'),
+    (TEST_ALL_PARAMS, ATTACH_WIN_ALL_EXPECTED_CALL, 'Windows'),
+    (TEST_ALL_KWARGS, ATTACH_LIN_ALL_EXPECTED_CALL, 'Linux'),
+    (TEST_ALL_PARAMS, ATTACH_LIN_ALL_EXPECTED_CALL, 'Linux'),
+])
+@patch.dict(os.environ, TEST_S32DS_RUNTIME_ENV, clear=True)
+@patch('platform.system')
+@patch('tempfile.TemporaryDirectory')
+@patch('runners.core.ZephyrBinaryRunner.popen_ignore_int')
+@patch('runners.core.ZephyrBinaryRunner.check_call')
+@patch('runners.core.ZephyrBinaryRunner.require', side_effect=require_patch)
+def test_attach(require, check_call, popen_ignore_int, temporary_dir, system,
+                pedbg_args, expected, osname, pedbg, tmp_path):
 
-#     # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
-#     temporary_dir.return_value.__enter__.return_value = tmp_path
-#     gdb_script = tmp_path / 'runner.nxp_pedbg'
-#     expected_client = [gdb_script.as_posix() for _ in expected['client']]
+    # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
+    temporary_dir.return_value.__enter__.return_value = tmp_path
+    gdb_script = tmp_path / 'runner.nxp_pedbg'
+    expected_client = [e.replace('TEST_GDB_SCRIPT', gdb_script.as_posix())
+                       for e in expected['client']]
 
-#     system.return_value = osname
-#     expected_env = TEST_S32DS_RUNTIME_ENV if osname == 'Windows' else None
+    system.return_value = osname
+    expected_env = TEST_S32DS_RUNTIME_ENV if osname == 'Windows' else None
 
-#     runner = pedbg(pedbg_args)
-#     runner.run('attach')
+    runner = pedbg(pedbg_args)
+    runner.run('attach')
 
-#     assert require.called
-#     assert gdb_script.read_text().splitlines() == expected['gdb_script']
-#     popen_ignore_int.assert_called_once_with(expected['server'], env=expected_env)
-#     check_call.assert_called_once_with(expected_client, env=expected_env)
+    assert require.called
+    assert gdb_script.read_text().splitlines() == expected['gdb_script']
+    popen_ignore_int.assert_called_once_with(expected['server'], env=expected_env)
+    check_call.assert_called_once_with(expected_client, env=expected_env)
