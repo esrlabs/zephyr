@@ -150,30 +150,28 @@ This board integrates an OpenSDA debug adapter. It can be used for flashing and 
 
 Connect the USB cable to a PC and connect micro USB connector of the USB cable to micro-B port J24 on the ``s32k148_evb``.
 
-In order to use NXP S32 Design Studio IDE install the debug host tools as in indicated in :ref:`nxp-s32-debug-host-tools`.
+In order to use NXP S32 Design Studio IDE install the debug host tools as indicated in :ref:`nxp-s32-debug-host-tools`.
 
 In order to use GDB, first install PEMicro USB driver:
 
 - download `PEMicro USB driver`_
 - Windows: run installation file, Linux: extract downloaded file and run ``setup.sh`` file
 
-Next, download GDB Server Plug-In. It provides GDB remote debugging and flash programming support:
+Next, download P&E Micro GDB Server Plug-In. It provides GDB remote debugging and flash programming support:
 
 - download `GDB Server Plug-In for Eclipse-based ARM IDEs`_
 - extract downloaded file
 - unzip jar file ``com.pemicro.debug.gdbjtag.pne_X.X.X.XXXXXXXXXXXX.jar``
 
-The server can be run using the following command:
+Run the ``west debug`` command to start a GDB session.
 
 .. code-block:: console
 
-	pegdbserver_console -startserver -device=NXP_S32K1xx_S32K148F2M0M11
+	west debug
 
-Use this command to flash ``zephyr.elf`` file:
-
-.. code-block:: console
-
-	(gdb) load zephyr.elf
+Use the ``--nxpide-path`` parameter to specify the NXP S32 Design Studio installation directory.
+To specify the P&E Micro GDB Server Plug-In location, use the ``--pemicro-plugin-path`` parameter.
+If these parameters are not provided, the script will search by itself.
 
 Configuring a Console
 =====================
