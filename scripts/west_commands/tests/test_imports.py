@@ -39,6 +39,7 @@ def test_runner_imports():
         'native',
         'nrfjprog',
         'nrfutil',
+        'nxp_pedbg',
         'nxp_s32dbg',
         'openocd',
         'probe-rs',
