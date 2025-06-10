@@ -10,3 +10,4 @@ board_runner_args(jlink
 )
 
 include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
+include(${ZEPHYR_BASE}/boards/common/pedbg.board.cmake)

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from conftest import RC_KERNEL_ELF
-from runners.nxp_pedbg import NXPPEDebugProbeConfig, NXPPEDebugProbeRunner
+from runners.pedbg import NXPPEDebugProbeConfig, NXPPEDebugProbeRunner
 
 TEST_DEVICE = 'pedbg'
 TEST_SPEED = 5000
@@ -264,7 +264,7 @@ def test_debug(
 ):
     # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
     temporary_dir.return_value.__enter__.return_value = tmp_path
-    gdb_script = tmp_path / 'runner.nxp_pedbg'
+    gdb_script = tmp_path / 'runner.pedbg'
     expected_client = [
         e.replace('TEST_GDB_SCRIPT', gdb_script.as_posix()) for e in expected['client']
     ]
@@ -310,7 +310,7 @@ def test_attach(
 ):
     # mock tempfile.TemporaryDirectory to return `tmp_path` and create gdb init script there
     temporary_dir.return_value.__enter__.return_value = tmp_path
-    gdb_script = tmp_path / 'runner.nxp_pedbg'
+    gdb_script = tmp_path / 'runner.pedbg'
     expected_client = [
         e.replace('TEST_GDB_SCRIPT', gdb_script.as_posix()) for e in expected['client']
     ]
