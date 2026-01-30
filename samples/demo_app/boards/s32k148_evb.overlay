@@ -1,0 +1,33 @@
+#include <zephyr/dt-bindings/adc/adc.h>
+
+&flexcan0 {
+    bitrate = <500000>;
+};
+
+&pinctrl {
+    adc0_default: adc0_default {
+        group_1 {
+            pinmux = <ADC0_SE28_PTC28>;
+            drive-strength = "low";
+        };
+    };
+};
+
+&adc0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel@1c {
+        reg = <28>;
+        zephyr,gain = "ADC_GAIN_1";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
+
+    sample-time = <65>;
+    vref-mv = <5000>;
+    pinctrl-0 = <&adc0_default>;
+    pinctrl-names = "default";
+    status = "okay";
+};

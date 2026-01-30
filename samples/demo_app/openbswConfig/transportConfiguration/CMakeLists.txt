@@ -1,0 +1,4 @@
+add_library(transportConfiguration INTERFACE)
+
+target_include_directories(transportConfiguration INTERFACE
+        include)

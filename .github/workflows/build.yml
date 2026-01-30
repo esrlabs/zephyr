@@ -1,0 +1,56 @@
+name: Build samples on supported zephyr boards
+
+on: [push, pull_request]
+
+jobs:
+    run-command:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Setup Zephyr project
+          uses: zephyrproject-rtos/action-zephyr-setup@v1
+          with:
+            app-path: .
+
+        - name: Install jq
+          run: sudo apt install jq
+
+        - name: Build applications for boards as specified in build_matrix.json
+          run: |
+            set +e  # revert the default `set -e` so as to continue if one command fails
+            exitvalue=0
+            echo "## Build results summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Build command | Result |" >> $GITHUB_STEP_SUMMARY
+            echo "| ------------- | ------ |" >> $GITHUB_STEP_SUMMARY
+            count=`jq '. | length' build_matrix.json`
+            for ((i=0; i<$count; i++)); do
+              application=`jq -r .[$i].application build_matrix.json`
+              boardcount=`jq ".[$i].boards | length" build_matrix.json`
+              for ((j=0; j<$boardcount; j++)); do
+                board=`jq -r .[$i].boards[$j].name build_matrix.json`
+                shields=`jq -r .[$i].boards[$j].shields build_matrix.json`
+                extra_conf=`jq -r .[$i].boards[$j].extra_conf build_matrix.json`
+                cmd="west build -p -b $board"
+                if [ "$shields" != "null" ]; then
+                  for shield in `jq -r .[$i].boards[$j].shields[] build_matrix.json`; do
+                    cmd="$cmd --shield $shield"
+                  done
+                fi
+                cmd="$cmd $application"
+                if [ "$extra_conf" != "null" ]; then
+                    cmd="$cmd -- -DEXTRA_CONF_FILE=$extra_conf"
+                fi
+                eval $cmd
+                if [ "$?" -ne 0 ]
+                then
+                  exitvalue=1  # Mark step as failed if any build fails
+                  echo "| $cmd | :x: FAIL |" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "| $cmd | :white_check_mark: PASS |" >> $GITHUB_STEP_SUMMARY
+                fi
+              done
+            done
+            exit $exitvalue

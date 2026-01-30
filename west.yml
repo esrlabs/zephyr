@@ -1,0 +1,31 @@
+manifest:
+
+  remotes:
+
+    - name: github_eclipse_openbsw
+      url-base: https://github.com/eclipse-openbsw
+
+    - name: github_zephyrproject_rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+
+    - name: zephyr
+      remote: github_zephyrproject_rtos
+      revision: ea6eade52b595b064af8bc232d26dc3b67eb9a6d
+      import:
+        # By using name-allowlist we can clone only the modules that are
+        # strictly needed by the application.
+        name-allowlist:
+          - cmsis      # required by the ARM port
+          - cmsis_6
+          - hal_nxp
+          - hal_adi
+          - hal_rpi_pico
+          - hal_stm32
+          - net-tools
+          - segger
+
+    - name: openbsw
+      remote: github_eclipse_openbsw
+      revision: 82397e004ee1d8bd38426c5d25239bf986146ce5

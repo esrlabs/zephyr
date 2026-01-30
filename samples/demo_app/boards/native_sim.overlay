@@ -1,0 +1,11 @@
+/ {
+    chosen {
+        zephyr,canbus = &can0;
+    };
+};
+
+&can0 {
+    host-interface = "vcan0";
+    bus-speed = <500000>;
+    status = "okay";
+};

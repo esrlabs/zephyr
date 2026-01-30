@@ -1,0 +1,6 @@
+add_subdirectory(asyncBinding)
+add_subdirectory(asyncCoreConfiguration)
+add_subdirectory(configuration)
+add_subdirectory(lifecycleSupport)
+add_subdirectory(transportConfiguration)
+add_subdirectory(udsConfiguration)

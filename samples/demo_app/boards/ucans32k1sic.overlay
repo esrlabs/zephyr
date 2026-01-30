@@ -1,0 +1,3 @@
+&flexcan0 {
+    bus-speed = <500000>;
+};

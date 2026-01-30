@@ -1,0 +1,4 @@
+add_library(udsConfiguration INTERFACE)
+
+target_include_directories(udsConfiguration INTERFACE
+        include)
